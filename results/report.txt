@@ -1,0 +1,66 @@
+========================================================================
+FX SESSION RANGE FORECAST - TEST REPORT (excerpt)   2026-09-06 17:40
+========================================================================
+
+SETUP
+  symbol          EURUSD
+  target          NY range 07:00-10:00 America/New_York (pips)
+  model           RBF-SVR (median-impute -> standardise -> SVR on log range)
+                  + residual-quantile prediction band
+  features        15 (selected from 40+ candidates; definitions not published)
+  data            4,929 days   2006-01-03 .. 2024-12-31
+  out-of-sample   3,372 days   2012-01-03 .. 2024-12-31
+  folds           13 (expanding, chronological, 5-day embargo)
+  holdout         2025-01-01 onward reserved - not trained on, not scored here
+
+CHECKS   (executed, not asserted)
+  [PASS] structural   no feature window ends after the target opens
+  [PASS] statistical  no feature rank-correlates >0.99 with the label (worst: 0.566)
+  [PASS] split        13 folds, train always ends before test (gap 5-5d)
+  [PASS] coverage     test blocks do not overlap
+
+========================================================================
+RESULT   (out-of-sample, pips unless noted)
+========================================================================
+
+  Every day below is out-of-sample for the model: 13 folds, each trained
+  only on its own past. It is NOT blind to the developer - the feature set
+  and encodings were chosen by reading these same scores. Read it as a
+  development metric, not as a forecast of live error.
+
+                 n      mae        mse     rmse     mape    medae     bias      r2  spearman  hit_rate
+  svm       3372.0  12.6683   406.4644  20.1610  31.3170   8.4171  -3.1928  0.4309    0.6592    0.7443
+  prev_day  3372.0  21.5518  1110.6955  33.3271  56.6125  14.1000  -0.0039 -0.5550    0.2781    0.5928
+  median_20 3372.0  15.6049   653.9693  25.5728  37.3592  10.0500  -5.6323  0.0844    0.4444    0.6489
+  ewma_20   3372.0  16.3975   624.3725  24.9874  45.2114  11.9307   0.1110  0.1259    0.4452    0.6507
+
+    edge over median_20:   +2.937 pips MAE  (model ahead)
+
+  baselines
+    prev_day    yesterday's NY range
+    median_20   median of the previous 20 NY ranges
+    ewma_20     exponentially weighted mean of past NY ranges (half-life 10 days)
+
+  hit_rate      share of days the forecast correctly calls the range above or
+                below its own trailing median (causal: uses only past days)
+
+WATCH
+  bias            -3.19 pips (under-forecasting on average)
+  worst weekday   Thu  mae 16.14
+  worst regime    5 wildest  mae 19.76
+  worst year      2015  mae 20.49
+
+========================================================================
+INTERVAL FORECAST
+========================================================================
+
+  quantiles       [0.1, 0.25, 0.5, 0.75, 0.9]  (SVR point + held-back-residual quantile shift)
+  q10             aims 10%, lands 9.6%  (off by -0.4)   median 21.3 pips
+  q25             aims 25%, lands 23.9%  (off by -1.1)   median 26.5 pips
+  q50             aims 50%, lands 49.1%  (off by -0.9)   median 33.6 pips
+  q75             aims 75%, lands 74.1%  (off by -0.9)   median 43.3 pips
+  q90             aims 90%, lands 89.9%  (off by -0.1)   median 56.4 pips
+  q10-q90 band    promises 80% coverage, delivers 80.3%
+  median band     21-56 pips, width 35.3
+
+========================================================================
